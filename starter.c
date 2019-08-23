@@ -1,6 +1,9 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include<string.h>
 
 // char *home;
@@ -21,19 +24,22 @@ int prompt()
 }
 int main(){
 
-    int x=2,m=0;
+    int x=2,m=0,r=0;
     // get tilda
-
+    char *homey = (char*)malloc(4096 * sizeof(char*));
     char *uspath = (char*)malloc(4096 * sizeof(char*));
     uspath = getcwd(uspath,4096);
     char *home = uspath;
     printf("%s",home);
 
     char *str1 = (char*)malloc(100 * sizeof(char*));    
+    char **cmd_arg = (char**)malloc(50*sizeof(char**));
 
     do
     {
         prompt();
+        for(int i=0;i<50;++i)
+            cmd_arg[i] = NULL;
         size_t buf_siz = 32;
         char* token = "a";
         char *buf = (char*)malloc(64* sizeof(char*));   
@@ -52,7 +58,6 @@ int main(){
             buf = *saveptr;
         }   
 
-        char **cmd_arg = (char**)malloc(50*sizeof(char**));
 
         for(int i =0;command_list[i]!= NULL;++i)
         {
@@ -97,7 +102,7 @@ int main(){
                     {
                         char *ptr1 = cmd_arg[1];
                         ptr1 += 1;
-                        char *homey = home;
+                        homey = home;
                         strcat(homey,ptr1);
                         chdir(homey); 
                     }
@@ -108,15 +113,85 @@ int main(){
                     chdir(cmd_arg[1]);
                 }
 
-                
             }
+
+             if(strcmp(cmd_arg[0],"ls")==0)
+             {
+                
+                if(cmd_arg[1] == NULL)
+                {
+                    DIR *cwd;
+                    struct dirent *dir_struct;
+                    cwd = opendir(".");
+                    if (cwd)
+                    {
+                        while ((dir_struct = readdir(cwd)) != NULL)
+                        {
+                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
+                                printf("%s\n", dir_struct->d_name);
+                        }
+                        closedir(cwd);
+                    }
+                }
+
+                else if(!strcmp(cmd_arg[1],"-a"))
+                {
+                    DIR *cwd;
+                    struct dirent *dir_struct;
+                    cwd = opendir(".");
+                    if (cwd)
+                    {
+                        while ((dir_struct = readdir(cwd)) != NULL)
+                        {
+                            printf("%s\n", dir_struct->d_name);
+                        }
+                        closedir(cwd);
+                    }
+                }
+
+                else if(!strcmp(cmd_arg[1],"-l"))
+                {
+                    char perm[11];
+                    struct stat status;
+                    stat(uspath, &status);
+                    // printf("%d",S_ISDIR(status.st_mode));
+
+                    DIR *cwd;
+                    struct dirent *dir_struct;
+                    cwd = opendir(".");
+                    if (cwd)
+                    {
+                        while ((dir_struct = readdir(cwd)) != NULL)
+                        {
+                            homey = getcwd(homey,4096);
+
+                            strcat(homey,"/");
+                            strcat(homey,dir_struct->d_name);
+
+                            // printf("%s\n",homey);
+
+                            stat(homey,&status);
+                            
+
+                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
+                            {
+                                if(S_ISDIR(status.st_mode)) perm[0] = 'd';
+                                else perm[0] = '-';
+                                printf("%s ",perm);
+                                printf("%s\n", dir_struct->d_name);
+                            }
+                        }    
+                    }
+                        closedir(cwd);   
+                }
+             }
         }
-        
+            
     
 
 
       
     
     }
-    while(x--);
+    while(strcmp(cmd_arg[0],"quit"));
 }
