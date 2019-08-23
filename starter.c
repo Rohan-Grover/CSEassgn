@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include<string.h>
+#include <pwd.h>
+#include<time.h>
 
 // char *home;
 char *uspath;
@@ -154,7 +156,6 @@ int main(){
                     char perm[11];
                     struct stat status;
                     stat(uspath, &status);
-                    // printf("%d",S_ISDIR(status.st_mode));
 
                     DIR *cwd;
                     struct dirent *dir_struct;
@@ -168,7 +169,6 @@ int main(){
                             strcat(homey,"/");
                             strcat(homey,dir_struct->d_name);
 
-                            // printf("%s\n",homey);
 
                             stat(homey,&status);
                             
@@ -177,8 +177,46 @@ int main(){
                             {
                                 if(S_ISDIR(status.st_mode)) perm[0] = 'd';
                                 else perm[0] = '-';
-                                printf("%s ",perm);
-                                printf("%s\n", dir_struct->d_name);
+                                
+                                if(status.st_mode & S_IRUSR) perm[1] = 'r';
+                                else perm[1] = '-';
+                                
+                                if(status.st_mode & S_IWUSR) perm[2] = 'w';
+                                else perm[2] = '-';
+                                
+                                if(status.st_mode & S_IXUSR) perm[3] = 'x';
+                                else perm[3] = '-';
+                                
+                                if(status.st_mode & S_IRGRP) perm[4] = 'r';
+                                else perm[4] = '-';
+
+                                if(status.st_mode & S_IWGRP) perm[5] = 'w';
+                                else perm[5] = '-';
+
+                                if(status.st_mode & S_IXGRP) perm[6] = 'x';
+                                else perm[6] = '-';
+
+                                if(status.st_mode & S_IROTH) perm[7] = 'r';
+                                else perm[7] = '-';
+
+                                if(status.st_mode & S_IWOTH) perm[8] = 'w';
+                                else perm[8] = '-';
+
+                                if(status.st_mode & S_IXOTH) perm[9] = 'x';
+                                else perm[9] = '-';
+
+                                struct passwd *pws;
+                                struct passwd *pwr;
+                                pws = getpwuid(status.st_uid);
+                                pwr = getpwuid(status.st_gid);
+                                char *userid = pws->pw_name;
+                                char *groupid = pwr->pw_name;
+                                
+                                char result[100];
+                                time_t t;
+                                t = status.st_ctime;
+                                strftime(result, sizeof(result), "%b %d %I:%M",localtime(&t));
+                                printf("%s %ld %s %s %ld %s %s\n",perm,status.st_nlink,userid,groupid,status.st_size,result,dir_struct->d_name);
                             }
                         }    
                     }
