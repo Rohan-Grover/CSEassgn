@@ -88,19 +88,19 @@ int main(){
                     chdir(home);
                 else if(cmd_arg[1][0] == '~')
                 {
+                    // printf("YEET");
                     if(cmd_arg[1][1] == '\0' )
                         chdir(home);
 
                 
-                    // else
-                    // {
-                    //     chdir(home);
-                    //     for(int j = 2; cmd_arg[1][j] != '0';++j)
-                    //     {
-                    //         strcat(str1,cmd_arg[1][j]);
-                    //         chdir(str1);
-                    //     }
-                    // }
+                    else
+                    {
+                        char *ptr1 = cmd_arg[1];
+                        ptr1 += 1;
+                        char *homey = home;
+                        strcat(homey,ptr1);
+                        chdir(homey); 
+                    }
                 }
                 
                 else
@@ -111,7 +111,7 @@ int main(){
                 
             }
         }
-
+        
     
 
 
