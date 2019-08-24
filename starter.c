@@ -7,6 +7,8 @@
 #include<string.h>
 #include <pwd.h>
 #include<time.h>
+#include<fcntl.h> 
+
 
 // char *home;
 char *uspath;
@@ -30,6 +32,8 @@ int main(){
     // get tilda
     char *homey = (char*)malloc(4096 * sizeof(char*));
     char *uspath = (char*)malloc(4096 * sizeof(char*));
+    char *buffer = (char*)malloc(4096 * sizeof(char*));
+    char *buffers = (char*)malloc(4096 * sizeof(char*));
     uspath = getcwd(uspath,4096);
     char *home = uspath;
     // printf("%s",home);
@@ -37,6 +41,8 @@ int main(){
     char *str1 = (char*)malloc(100 * sizeof(char*));    
     char **cmd_arg = (char**)malloc(50*sizeof(char**));
     char **command_list = (char**)malloc(330*sizeof(char**));
+    char **saveptr = malloc(sizeof(char**));
+    char **saveptrs = malloc(sizeof(char**));
     do
     {
         prompt();
@@ -52,7 +58,6 @@ int main(){
         int i=0;
         while(strcmp(buf,""))
         {
-            char **saveptr = malloc(sizeof(char**));
             __strtok_r(buf, ";", saveptr);
             // printf("%s\n", buf);
             command_list[i++] = buf;
@@ -294,7 +299,69 @@ int main(){
                     }
                 }
                 
-             }
+            }
+
+            if(strcmp(cmd_arg[0],"pinfo")==0)
+            {
+                int pids;
+                if(cmd_arg[1] == NULL)
+                    pids = getpid();
+                else
+                {
+                    sscanf(cmd_arg[1], "%d", &pids); 
+                }
+
+                char path[40], *p;
+                FILE* statusf;
+
+                snprintf(path, 40, "/proc/%d/status", pids);
+                statusf = fopen(path, "r");
+                char * line = NULL;
+                size_t len = 0;
+                int bl =3;
+                while(bl--)
+                {
+                    getline(&line, &len, statusf);
+                }
+                __strtok_r(line, " ", saveptrs);
+                char info = line[strlen(line)-1];
+                fclose(statusf);
+
+                for(int mb = 0; mb<40;++mb)
+                    path[mb]='\0';
+                snprintf(path, 40, "/proc/%d/statm", pids);
+                int statusp = open(path, O_RDONLY);
+                read(statusp,buffer,4096);
+
+                __strtok_r(buffer, " ", saveptrs);
+
+                char *mem = buffer;
+
+
+                snprintf(path, 40, "/proc/%d/exe", pids);
+                readlink(path, buffers, 4096);
+                
+                printf("pid -- %d\n",pids);
+                if(info == '+')
+                    printf("Process Status -- S+\n");
+                else
+                    printf("Process Status -- %c\n",info);
+                printf("memory -- %s\n",mem);
+                if(buffers[0] == '\0')
+                    printf("Executable Path -- None\n");
+                else
+                printf("Executable Path -- %s\n",buffers);
+
+                for(int i =0;i<4096;++i)
+                    buffers[i] = '\0';
+                
+
+
+
+
+                
+            }
+
         }
         
     }
