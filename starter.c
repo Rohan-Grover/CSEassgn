@@ -32,11 +32,11 @@ int main(){
     char *uspath = (char*)malloc(4096 * sizeof(char*));
     uspath = getcwd(uspath,4096);
     char *home = uspath;
-    printf("%s",home);
+    // printf("%s",home);
 
     char *str1 = (char*)malloc(100 * sizeof(char*));    
     char **cmd_arg = (char**)malloc(50*sizeof(char**));
-
+    char **command_list = (char**)malloc(330*sizeof(char**));
     do
     {
         prompt();
@@ -45,7 +45,6 @@ int main(){
         size_t buf_siz = 32;
         char* token = "a";
         char *buf = (char*)malloc(64* sizeof(char*));   
-        char **command_list = (char**)malloc(330*sizeof(char**));
         ssize_t and = getline(&buf,&buf_siz,stdin);
         if(buf[and-1] == '\n')
             buf[and-1] = '\0';
@@ -117,9 +116,9 @@ int main(){
 
             }
 
-             if(strcmp(cmd_arg[0],"ls")==0)
-             {
-                
+            if(strcmp(cmd_arg[0],"ls")==0)
+            {
+                //showing wrong stuff for other dir
                 if(cmd_arg[1] == NULL)
                 {
                     DIR *cwd;
@@ -151,7 +150,7 @@ int main(){
                     }
                 }
 
-                else if(!strcmp(cmd_arg[1],"-l"))
+                else if(!strcmp(cmd_arg[1],"-l") || !strcmp(cmd_arg[1],"-la") || !strcmp(cmd_arg[1],"-al") )
                 {
                     char perm[11];
                     struct stat status;
@@ -159,21 +158,77 @@ int main(){
 
                     DIR *cwd;
                     struct dirent *dir_struct;
-                    cwd = opendir(".");
+                    if(cmd_arg[2] == NULL)
+                        cwd = opendir(".");
+                    else
+                        cwd = opendir(cmd_arg[2]);
                     if (cwd)
                     {
                         while ((dir_struct = readdir(cwd)) != NULL)
                         {
+
+                            
                             homey = getcwd(homey,4096);
+                            
+                        
+                    
 
                             strcat(homey,"/");
                             strcat(homey,dir_struct->d_name);
+                            // printf("%s\n",homey);
 
 
                             stat(homey,&status);
                             
+                            if(!strcmp(cmd_arg[1],"-l"))
+                            {   
+                                if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
+                                {
+                                    if(S_ISDIR(status.st_mode)) perm[0] = 'd';
+                                    else perm[0] = '-';
+                                    
+                                    if(status.st_mode & S_IRUSR) perm[1] = 'r';
+                                    else perm[1] = '-';
+                                    
+                                    if(status.st_mode & S_IWUSR) perm[2] = 'w';
+                                    else perm[2] = '-';
+                                    
+                                    if(status.st_mode & S_IXUSR) perm[3] = 'x';
+                                    else perm[3] = '-';
+                                    
+                                    if(status.st_mode & S_IRGRP) perm[4] = 'r';
+                                    else perm[4] = '-';
 
-                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
+                                    if(status.st_mode & S_IWGRP) perm[5] = 'w';
+                                    else perm[5] = '-';
+
+                                    if(status.st_mode & S_IXGRP) perm[6] = 'x';
+                                    else perm[6] = '-';
+
+                                    if(status.st_mode & S_IROTH) perm[7] = 'r';
+                                    else perm[7] = '-';
+
+                                    if(status.st_mode & S_IWOTH) perm[8] = 'w';
+                                    else perm[8] = '-';
+
+                                    if(status.st_mode & S_IXOTH) perm[9] = 'x';
+                                    else perm[9] = '-';
+
+                                    struct passwd *pws;
+                                    struct passwd *pwr;
+                                    pws = getpwuid(status.st_uid);
+                                    pwr = getpwuid(status.st_gid);
+                                    char *userid = pws->pw_name;
+                                    char *groupid = pwr->pw_name;
+                                    
+                                    char result[100];
+                                    time_t t;
+                                    t = status.st_ctime;
+                                    strftime(result, sizeof(result), "%b %d %I:%M",localtime(&t));
+                                    printf("%s %ld %s %s %ld %s %s\n",perm,status.st_nlink,userid,groupid,status.st_size,result,dir_struct->d_name);
+                                }
+                            }
+                            else
                             {
                                 if(S_ISDIR(status.st_mode)) perm[0] = 'd';
                                 else perm[0] = '-';
@@ -217,19 +272,31 @@ int main(){
                                 t = status.st_ctime;
                                 strftime(result, sizeof(result), "%b %d %I:%M",localtime(&t));
                                 printf("%s %ld %s %s %ld %s %s\n",perm,status.st_nlink,userid,groupid,status.st_size,result,dir_struct->d_name);
-                            }
+                            }                            
+                            
                         }    
                     }
-                        closedir(cwd);   
+                    closedir(cwd);   
                 }
+                else
+                {
+                    DIR *cwd;
+                    struct dirent *dir_struct;
+                    cwd = opendir(cmd_arg[1]);
+                    if (cwd)
+                    {
+                        while ((dir_struct = readdir(cwd)) != NULL)
+                        {
+                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
+                                printf("%s\n", dir_struct->d_name);
+                        }
+                        closedir(cwd);
+                    }
+                }
+                
              }
         }
-            
-    
-
-
-      
-    
+        
     }
     while(strcmp(cmd_arg[0],"quit"));
 }
