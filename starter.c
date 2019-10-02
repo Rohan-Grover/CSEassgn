@@ -7,16 +7,14 @@
 #include<string.h>
 #include <pwd.h>
 #include<time.h>
+#include<sys/wait.h> 
 #include<fcntl.h> 
-
-
-// char *home;
-char *uspath;
+#include "file.h"
+  
 int prompt()
 {
     char *usname = (char*)malloc(64 * sizeof(char*));
     char *ushost = (char*)malloc(64 * sizeof(char*));
-    // char *uspath = (char*)malloc(4096 * sizeof(char*));
 
     
     usname = getenv("USER");
@@ -26,25 +24,43 @@ int prompt()
     printf("\n%s@%s:%s$ ",usname,ushost,uspath);
 
 }
+void handle_sigchld(int sig) 
+{ 
+    int stats;
+    pid_t cpid = waitpid(-1,&stats,WNOHANG);
+    if (WIFEXITED(stats))
+    { 
+        for(int i = 0; i<=count;++i)
+        {
+            if(abc[i].pid == cpid)
+            {
+                printf("%s with pid %d exited normally \n",abc[i].job, cpid); 
+                abc[i].pid = 0;
+                strcpy(abc[i].job,"");
+            }
+        }
+    }
+} 
 int main(){
-
-    int x=2,m=0,r=0;
-    // get tilda
-    char *homey = (char*)malloc(4096 * sizeof(char*));
-    char *uspath = (char*)malloc(4096 * sizeof(char*));
-    char *buffer = (char*)malloc(4096 * sizeof(char*));
-    char *buffers = (char*)malloc(4096 * sizeof(char*));
+    count=0,flag=0;
+    x=2;
+    m=0;
+    r=0;
+    homey = (char*)malloc(4096 * sizeof(char*));
+    uspath = (char*)malloc(4096 * sizeof(char*));
+    buffer = (char*)malloc(4096 * sizeof(char*));
+    buffers = (char*)malloc(4096 * sizeof(char*));
     uspath = getcwd(uspath,4096);
-    char *home = uspath;
-    // printf("%s",home);
+    home = uspath;
 
-    char *str1 = (char*)malloc(100 * sizeof(char*));    
-    char **cmd_arg = (char**)malloc(50*sizeof(char**));
-    char **command_list = (char**)malloc(330*sizeof(char**));
-    char **saveptr = malloc(sizeof(char**));
-    char **saveptrs = malloc(sizeof(char**));
+    str1 = (char*)malloc(100 * sizeof(char*));    
+    cmd_arg = (char**)malloc(50*sizeof(char**));
+    command_list = (char**)malloc(330*sizeof(char**));
+    saveptr = malloc(sizeof(char**));
+    saveptrs = malloc(sizeof(char**));
     do
     {
+        signal(SIGCHLD, handle_sigchld);
         prompt();
         for(int i=0;i<50;++i)
             cmd_arg[i] = NULL;
@@ -59,10 +75,10 @@ int main(){
         while(strcmp(buf,""))
         {
             __strtok_r(buf, ";", saveptr);
-            // printf("%s\n", buf);
             command_list[i++] = buf;
             buf = *saveptr;
-        }   
+        }  
+         
 
 
         for(int i =0;command_list[i]!= NULL;++i)
@@ -84,7 +100,7 @@ int main(){
                 printf("%s",uspath);
             }
             
-            if(strcmp(cmd_arg[0],"echo")==0)
+            else if(strcmp(cmd_arg[0],"echo")==0)
             {
                 for(int j = 1;cmd_arg[j]!=NULL;++j)
                 {
@@ -93,276 +109,126 @@ int main(){
                     
             }
 
-            if(strcmp(cmd_arg[0],"cd")==0)
+            else if(strcmp(cmd_arg[0],"cd")==0)
             {
-                if(cmd_arg[1] == NULL)
-                    chdir(home);
-                else if(cmd_arg[1][0] == '~')
-                {
-                    // printf("YEET");
-                    if(cmd_arg[1][1] == '\0' )
-                        chdir(home);
-
-                
-                    else
-                    {
-                        char *ptr1 = cmd_arg[1];
-                        ptr1 += 1;
-                        homey = home;
-                        strcat(homey,ptr1);
-                        chdir(homey); 
-                    }
-                }
-                
-                else
-                {
-                    chdir(cmd_arg[1]);
-                }
+               cd();
 
             }
 
-            if(strcmp(cmd_arg[0],"ls")==0)
+            else if(strcmp(cmd_arg[0],"ls")==0)
             {
-                //showing wrong stuff for other dir
+                ls();
+            }
+
+            else if(strcmp(cmd_arg[0],"pinfo")==0)
+            {
+                pinfo(); 
+            }
+            else if(strcmp(cmd_arg[0],"setenv")==0)
+            {
                 if(cmd_arg[1] == NULL)
                 {
-                    DIR *cwd;
-                    struct dirent *dir_struct;
-                    cwd = opendir(".");
-                    if (cwd)
-                    {
-                        while ((dir_struct = readdir(cwd)) != NULL)
-                        {
-                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
-                                printf("%s\n", dir_struct->d_name);
-                        }
-                        closedir(cwd);
-                    }
+                    printf("Not enough command line arguments\n");
+                    continue;
+                }
+                else if(cmd_arg[3] != NULL)
+                {
+                    printf("Too many arguments\n");
+                    continue;
                 }
 
-                else if(!strcmp(cmd_arg[1],"-a"))
+                else
                 {
-                    DIR *cwd;
-                    struct dirent *dir_struct;
-                    cwd = opendir(".");
-                    if (cwd)
-                    {
-                        while ((dir_struct = readdir(cwd)) != NULL)
-                        {
-                            printf("%s\n", dir_struct->d_name);
-                        }
-                        closedir(cwd);
-                    }
-                }
-
-                else if(!strcmp(cmd_arg[1],"-l") || !strcmp(cmd_arg[1],"-la") || !strcmp(cmd_arg[1],"-al") )
-                {
-                    char perm[11];
-                    struct stat status;
-                    stat(uspath, &status);
-
-                    DIR *cwd;
-                    struct dirent *dir_struct;
+                    //changing according to will
                     if(cmd_arg[2] == NULL)
-                        cwd = opendir(".");
+                        setenv(cmd_arg[1], "", 1);
                     else
-                        cwd = opendir(cmd_arg[2]);
-                    if (cwd)
-                    {
-                        while ((dir_struct = readdir(cwd)) != NULL)
-                        {
+                        setenv(cmd_arg[1], cmd_arg[2], 1);
 
-                            
-                            homey = getcwd(homey,4096);
-                            
-                        
-                    
-
-                            strcat(homey,"/");
-                            strcat(homey,dir_struct->d_name);
-                            // printf("%s\n",homey);
-
-
-                            stat(homey,&status);
-                            
-                            if(!strcmp(cmd_arg[1],"-l"))
-                            {   
-                                if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
-                                {
-                                    if(S_ISDIR(status.st_mode)) perm[0] = 'd';
-                                    else perm[0] = '-';
-                                    
-                                    if(status.st_mode & S_IRUSR) perm[1] = 'r';
-                                    else perm[1] = '-';
-                                    
-                                    if(status.st_mode & S_IWUSR) perm[2] = 'w';
-                                    else perm[2] = '-';
-                                    
-                                    if(status.st_mode & S_IXUSR) perm[3] = 'x';
-                                    else perm[3] = '-';
-                                    
-                                    if(status.st_mode & S_IRGRP) perm[4] = 'r';
-                                    else perm[4] = '-';
-
-                                    if(status.st_mode & S_IWGRP) perm[5] = 'w';
-                                    else perm[5] = '-';
-
-                                    if(status.st_mode & S_IXGRP) perm[6] = 'x';
-                                    else perm[6] = '-';
-
-                                    if(status.st_mode & S_IROTH) perm[7] = 'r';
-                                    else perm[7] = '-';
-
-                                    if(status.st_mode & S_IWOTH) perm[8] = 'w';
-                                    else perm[8] = '-';
-
-                                    if(status.st_mode & S_IXOTH) perm[9] = 'x';
-                                    else perm[9] = '-';
-
-                                    struct passwd *pws;
-                                    struct passwd *pwr;
-                                    pws = getpwuid(status.st_uid);
-                                    pwr = getpwuid(status.st_gid);
-                                    char *userid = pws->pw_name;
-                                    char *groupid = pwr->pw_name;
-                                    
-                                    char result[100];
-                                    time_t t;
-                                    t = status.st_ctime;
-                                    strftime(result, sizeof(result), "%b %d %I:%M",localtime(&t));
-                                    printf("%s %ld %s %s %ld %s %s\n",perm,status.st_nlink,userid,groupid,status.st_size,result,dir_struct->d_name);
-                                }
-                            }
-                            else
-                            {
-                                if(S_ISDIR(status.st_mode)) perm[0] = 'd';
-                                else perm[0] = '-';
-                                
-                                if(status.st_mode & S_IRUSR) perm[1] = 'r';
-                                else perm[1] = '-';
-                                
-                                if(status.st_mode & S_IWUSR) perm[2] = 'w';
-                                else perm[2] = '-';
-                                
-                                if(status.st_mode & S_IXUSR) perm[3] = 'x';
-                                else perm[3] = '-';
-                                
-                                if(status.st_mode & S_IRGRP) perm[4] = 'r';
-                                else perm[4] = '-';
-
-                                if(status.st_mode & S_IWGRP) perm[5] = 'w';
-                                else perm[5] = '-';
-
-                                if(status.st_mode & S_IXGRP) perm[6] = 'x';
-                                else perm[6] = '-';
-
-                                if(status.st_mode & S_IROTH) perm[7] = 'r';
-                                else perm[7] = '-';
-
-                                if(status.st_mode & S_IWOTH) perm[8] = 'w';
-                                else perm[8] = '-';
-
-                                if(status.st_mode & S_IXOTH) perm[9] = 'x';
-                                else perm[9] = '-';
-
-                                struct passwd *pws;
-                                struct passwd *pwr;
-                                pws = getpwuid(status.st_uid);
-                                pwr = getpwuid(status.st_gid);
-                                char *userid = pws->pw_name;
-                                char *groupid = pwr->pw_name;
-                                
-                                char result[100];
-                                time_t t;
-                                t = status.st_ctime;
-                                strftime(result, sizeof(result), "%b %d %I:%M",localtime(&t));
-                                printf("%s %ld %s %s %ld %s %s\n",perm,status.st_nlink,userid,groupid,status.st_size,result,dir_struct->d_name);
-                            }                            
-                            
-                        }    
-                    }
-                    closedir(cwd);   
                 }
-                else
-                {
-                    DIR *cwd;
-                    struct dirent *dir_struct;
-                    cwd = opendir(cmd_arg[1]);
-                    if (cwd)
-                    {
-                        while ((dir_struct = readdir(cwd)) != NULL)
-                        {
-                            if(strcmp(dir_struct->d_name,".") && strcmp(dir_struct->d_name,".."))
-                                printf("%s\n", dir_struct->d_name);
-                        }
-                        closedir(cwd);
-                    }
-                }
-                
             }
-
-            if(strcmp(cmd_arg[0],"pinfo")==0)
+            else if(strcmp(cmd_arg[0],"unsetenv")==0)
             {
-                int pids;
                 if(cmd_arg[1] == NULL)
-                    pids = getpid();
+                {
+                    printf("Not enough command line arguments\n");
+                    continue;
+                }
                 else
                 {
-                    sscanf(cmd_arg[1], "%d", &pids); 
+                    //changing according to will
+                    unsetenv(cmd_arg[1]);
                 }
-
-                char path[40], *p;
-                FILE* statusf;
-
-                snprintf(path, 40, "/proc/%d/status", pids);
-                statusf = fopen(path, "r");
-                char * line = NULL;
-                size_t len = 0;
-                int bl =3;
-                while(bl--)
+            }
+            else if(strcmp(cmd_arg[0],"jobs")==0)
+            {
+                joba();
+            }
+            else if(strcmp(cmd_arg[0],"kjob")==0)
+            {
+                counta =1;
+                for(int l = 0; l<count;++l)
                 {
-                    getline(&line, &len, statusf);
+                    if(abc[l].pid != 0)
+                    {
+                        if(atoi(cmd_arg[1]) == counta)
+                        {
+                            kill(abc[l].pid,atoi(cmd_arg[2]));
+                            abc[l].pid = 0;
+                            strcpy(abc[l].job,"");   
+                        }
+                        counta++;
+                    }
                 }
-                __strtok_r(line, " ", saveptrs);
-                char info = line[strlen(line)-1];
-                fclose(statusf);
-
-                for(int mb = 0; mb<40;++mb)
-                    path[mb]='\0';
-                snprintf(path, 40, "/proc/%d/statm", pids);
-                int statusp = open(path, O_RDONLY);
-                read(statusp,buffer,4096);
-
-                __strtok_r(buffer, " ", saveptrs);
-
-                char *mem = buffer;
-
-
-                snprintf(path, 40, "/proc/%d/exe", pids);
-                readlink(path, buffers, 4096);
-                
-                printf("pid -- %d\n",pids);
-                if(info == '+')
-                    printf("Process Status -- S+\n");
-                else
-                    printf("Process Status -- %c\n",info);
-                printf("memory -- %s\n",mem);
-                if(buffers[0] == '\0')
-                    printf("Executable Path -- None\n");
-                else
-                printf("Executable Path -- %s\n",buffers);
-
-                for(int i =0;i<4096;++i)
-                    buffers[i] = '\0';
-                
-
-
-
-
-                
+            }
+            else if(strcmp(cmd_arg[0],"overkill")==0)
+            {
+                for(int l = 0; l<count;++l)
+                {
+                    if(abc[l].pid != 0)
+                    {
+                        kill(abc[l].pid,9);
+                        abc[l].pid = 0;
+                        strcpy(abc[l].job,"");
+                    }
+                }
             }
 
+
+            else
+            {
+                if(cmd_arg[1]!=NULL && strcmp(cmd_arg[1],"&\n"))
+                {
+                    if ((pid = fork()) == 0)
+                    {
+                        execvp(cmd_arg[0],cmd_arg);
+                        
+                    }
+                    else
+                    {
+                        abc[count].pid=pid;
+                        // printf()
+                        strcpy(abc[count].job,cmd_arg[0]);
+                        count++;
+                        if(count == 1000)
+                            count = 0;
+                    }   
+                    
+                
+                }
+                else
+                {
+                    if(fork() == 0)
+                       execvp(cmd_arg[0],cmd_arg);
+                    else
+                        wait(NULL);
+                }
+            
+            }
+            
+            
         }
+        continue; 
         
     }
     while(strcmp(cmd_arg[0],"quit"));
